@@ -1,0 +1,13 @@
+.*
+*.pyc
+__pycache__
+*.o
+*.a
+build/
+CMakeFiles/
+bin/
+lib/
+Makefile
+graph_info.json
+CMakeCache.txt
+compile_commands.json
