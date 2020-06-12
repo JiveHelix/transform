@@ -21,7 +21,8 @@ from mypy.nodes import (
     MemberExpr,
     TypeInfo,
     FuncDef,
-    Decorator)
+    Decorator,
+    CallExpr)
 
 from mypy.plugins.common import add_method_to_class
 
@@ -66,10 +67,20 @@ def transform_class_maker_callback(
         context: mypy.plugin.ClassDefContext) -> None:
     proto_type = context.reason.args[0]
     attribute_type = context.reason.args[1]
-    init = context.reason.args[2]
+
+    try:
+        init = ('True' == context.reason.args[2].name)
+    except IndexError:
+        init = False
 
     proto_type_node = proto_type.node
-    attribute_type_node = attribute_type.node
+
+    if isinstance(attribute_type, CallExpr):
+        functor = attribute_type.callee.node
+        functorCall = functor.names['__call__']
+        attribute_type_node = functorCall.node.type.ret_type.type
+    else:
+        attribute_type_node = attribute_type.node
 
     # Multiple passes may be required to resolve all type information.
     # We must def until all nodes are defined.

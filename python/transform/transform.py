@@ -40,7 +40,7 @@ def GetHasName(attributeMaker: Callable[..., AttributeType]) -> bool:
 def Transform(
         protoType: Type[ProtoType],
         attributeMaker: Callable[..., AttributeType],
-        init: bool,
+        init: bool = False,
         namePrefix: Optional[str] = None) -> Callable[[Type[T]], Type[T]]:
 
     hasName: bool = GetHasName(attributeMaker)
