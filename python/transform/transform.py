@@ -67,9 +67,6 @@ def Transform(
 
     def TransformWrapper(class_: Type[T]) -> Type[T]:
         # Set the class vars from protoType
-        if hasattr(protoType, '__slots__'):
-            setattr(class_, '__slots__', protoType.__slots__)
-
         classVars: List[str] = []
         for name in dir(protoType):
             if name.startswith("_"):
@@ -105,7 +102,6 @@ def Transform(
     return TransformWrapper
 
 
-
 def GetInstanceVars(class_: Type[Any]) -> List[str]:
     return class_.__transform_vars__
 
@@ -113,3 +109,17 @@ def GetInstanceVars(class_: Type[Any]) -> List[str]:
 def GetClassVars(class_: Type[Any]) -> List[str]:
     return class_.__transform_class_vars__
 
+
+# Convenience functions for interface classes created by @Transform
+def InitializeModel(
+        model: Any,
+        values: Any,
+        nodeCreator: Callable[[str, Any], Any]) -> None:
+
+    for name in GetInstanceVars(type(model)):
+        setattr(model, name, nodeCreator(name, getattr(values, name)))
+
+
+def InitializeInterface(interface: Any, model: Any) -> None:
+    for name in GetInstanceVars(type(interface)):
+        setattr(interface, name, getattr(model, name).GetInterfaceNode())

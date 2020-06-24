@@ -11,7 +11,7 @@
 from __future__ import annotations
 from typing import Optional, Callable
 import mypy.plugin
-from transform import (
+from transform_plugin import (
     transform_makers,
     transform_class_maker_callback)
 
