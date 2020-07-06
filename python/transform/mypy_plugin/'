@@ -1,8 +1,8 @@
 ##
 # @file transform.py
-#
+# 
 # @brief A custom plugin to type check transformed classes.
-#
+# 
 # @author Jive Helix (jivehelix@gmail.com)
 # @date 11 Jun 2020
 # @copyright Jive Helix
@@ -28,8 +28,6 @@ from mypy.plugins.common import add_method_to_class
 
 
 transform_makers = {"transform.transform.Transform", }
-
-typeInfoByProtoTypeName: Dict[str, TypeInfo] = {}
 
 
 class LookupMemberError(RuntimeError):
@@ -138,85 +136,41 @@ def transform_class_maker_callback(
         print("Unable to determine the attribute type")
         return
 
-    context.cls.info = transform_type_info(
-        context,
-        proto_type_node,
-        attribute_type_node,
-        init)
-
-    typeInfoByProtoTypeName[proto_type_node.fullname] = context.cls.info
-
-
-def transform_type_info(
-        context: mypy.plugin.ClassDefContext,
-        proto_type_node: TypeInfo,
-        attribute_type_node: TypeInfo,
-        init: bool) -> TypeInfo:
-
-    transformed_info: TypeInfo = context.cls.info
-
     # Get the list of proto_type class members that are not dunders or private
     names = [
         name for name in proto_type_node.names
         if not name.startswith('_')]
 
-    transformedNames = []
-
+    transformed_info = context.cls.info # TypeInfo
+    # proto_type_node is TypeInfo
     for name in names:
         proto_node = proto_type_node.names[name] # SymbolTableNode
-
-        if isinstance(proto_node.node, FuncDef):
-            # Ignore methods
-            continue
-
-        transformedNames.append(name)
         copied_node = proto_node.copy() # SymbolTableNode
         copied_node.node = copy.copy(proto_node.node) # Var
-
+        import pdb
+        pdb.set_trace()
         copied_node.node._fullname = "{}.{}".format(
             transformed_info.fullname,
             copied_node.node.name)
 
-        copied_node.plugin_generated = True
-
-        try:
-            nestedTypeInfo = typeInfoByProtoTypeName.get(
-                proto_node.node.type.type.fullname,
-                None)
-        except AttributeError:
-            nestedTypeInfo = None
-            if isinstance(proto_node.node.type, mypy.types.AnyType):
-                # AnyType is not a transformable class anyway.
-                pass
-            else:
-                print(
-                    "Warning: Failed to check fullname of {}: {}".format(
-                        name,
-                        proto_node.node.type))
-
-        if nestedTypeInfo is not None:
-            # This member's type has been transformed.
-            copied_node.node.type = \
-                mypy.types.Instance(nestedTypeInfo, [])
+        if attribute_type_node.is_generic():
+            typeArgs = [proto_node.node.type]
         else:
-            if attribute_type_node.is_generic():
-                typeArgs = [proto_node.node.type]
-            else:
-                typeArgs = []
+            typeArgs = []
 
-            copied_node.node.type = \
-                mypy.types.Instance(attribute_type_node, typeArgs)
+        copied_node.node.type = \
+            mypy.types.Instance(attribute_type_node, typeArgs)
 
+        copied_node.plugin_generated = True
         transformed_info.names[name] = copied_node
 
-    protoTypeInstance = mypy.types.Instance(proto_type_node, [])
-
     if init:
+        init_argument_type = mypy.types.Instance(proto_type_node, [])
         argument = Argument(
             Var(
                 proto_type_node.name.lower(),
-                protoTypeInstance),
-            protoTypeInstance,
+                init_argument_type),
+            init_argument_type,
             None,
             ARG_POS)
 
@@ -227,16 +181,6 @@ def transform_type_info(
             [argument, ],
             mypy.types.NoneType())
 
-    add_method_to_class(
-        context.api,
-        context.cls,
-        "GetProtoType",
-        [],
-        protoTypeInstance)
-
     # Now that the class is built, update the info
-    for name in transformedNames:
+    for name in names:
         transformed_info.names[name].node.info = transformed_info
-
-    return transformed_info
-

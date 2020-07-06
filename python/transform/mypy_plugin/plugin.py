@@ -1,8 +1,8 @@
 ##
 # @file plugin.py
-# 
+#
 # @brief Loads a custom mypy plugin.
-# 
+#
 # @author Jive Helix (jivehelix@gmail.com)
 # @date 11 Jun 2020
 # @copyright Jive Helix
